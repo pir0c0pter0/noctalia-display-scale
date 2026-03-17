@@ -80,7 +80,50 @@ widgetsmove/
 
 ## How to Install
 
-### Display Scale + Focus Ring + Gaps
+### Automatic Install (recommended)
+
+There are two install scripts depending on your distro:
+
+| Script | Distro | Noctalia Shell path | Requires sudo |
+|--------|--------|---------------------|---------------|
+| `install.sh` | CachyOS / Arch | `/etc/xdg/quickshell/noctalia-shell` | Yes |
+| `install-fedora.sh` | Fedora | `~/.config/quickshell/noctalia-shell` | No |
+
+**CachyOS / Arch:**
+
+```bash
+git clone https://github.com/pir0c0pter0/noctalia-display-scale.git
+cd noctalia-display-scale
+sudo bash install.sh
+```
+
+**Fedora:**
+
+```bash
+git clone https://github.com/pir0c0pter0/noctalia-display-scale.git
+cd noctalia-display-scale
+bash install-fedora.sh
+```
+
+Both scripts are idempotent — they skip already-applied changes, so you can re-run safely after updates.
+
+After install, `fix-niri-functions.py` (Arch) or `fix-niri-functions-fedora.py` (Fedora) is run automatically to patch NiriService for modular niri configs (split `.kdl` files with includes).
+
+### Key differences between CachyOS and Fedora
+
+| | CachyOS / Arch | Fedora |
+|--|---------------|--------|
+| Shell location | `/etc/xdg/quickshell/noctalia-shell` (system-wide) | `~/.config/quickshell/noctalia-shell` (per-user) |
+| Permissions | Requires `sudo` | No `sudo` needed |
+| Install method | Inline patching + patch files | Inline patching only (no patch files needed) |
+| Niri config | Single `config.kdl` | Modular config with includes |
+
+### Manual Install
+
+<details>
+<summary>Click to expand manual instructions</summary>
+
+#### Display Scale + Focus Ring + Gaps
 
 ```bash
 # Copy new files
@@ -97,7 +140,7 @@ done
 quickshell -c noctalia-shell
 ```
 
-### Spotify Plugin
+#### Spotify Plugin
 
 ```bash
 # Install dependencies
@@ -114,7 +157,7 @@ for patch in /path/to/noctalia/spotfy/patches/*.patch; do
 done
 ```
 
-### Bar Widget Drag Reorder
+#### Bar Widget Drag Reorder
 
 ```bash
 # Copy files
@@ -127,6 +170,8 @@ for patch in /path/to/noctalia/widgetsmove/patches/*.patch; do
   patch -p1 < "$patch"
 done
 ```
+
+</details>
 
 ## Architecture
 
