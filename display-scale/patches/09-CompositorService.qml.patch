@@ -1,0 +1,45 @@
+--- a/Services/Compositor/CompositorService.qml
++++ b/Services/Compositor/CompositorService.qml
+@@ -132,6 +132,7 @@
+         backend.initialize();
+         applySavedScales();
++        applySavedLayoutSettings();
+       }
+     }
+   }
+@@ -159,6 +160,19 @@
+     }
+   }
+
++  // Apply saved layout settings (gaps, focus-ring) on startup
++  function applySavedLayoutSettings() {
++    try {
++      var focusRingWidth = Settings.data.display.focusRingWidth ?? 2;
++      var gaps = Settings.data.display.gaps ?? 8;
++      if (backend && backend.applyLayoutSettings) {
++        Logger.i("CompositorService", "Restoring layout: focus-ring=" + focusRingWidth + " gaps=" + gaps);
++        backend.applyLayoutSettings(focusRingWidth, gaps);
++      }
++    } catch (error) {
++      Logger.e("CompositorService", "Failed to apply saved layout settings:", error);
++    }
++  }
++
+@@ -340,6 +354,18 @@
+   }
+
++  function setFocusRingWidth(width) {
++    if (backend && backend.setFocusRingWidth) {
++      backend.setFocusRingWidth(width);
++      Settings.data.display.focusRingWidth = width;
++    }
++  }
++
++  function setGaps(gaps) {
++    if (backend && backend.setGaps) {
++      backend.setGaps(gaps);
++      Settings.data.display.gaps = gaps;
++    }
++  }
++
+   // Public function to get scale for a specific display

@@ -11,7 +11,9 @@ ColumnLayout {
   spacing: Style.marginL
   Layout.fillWidth: true
 
-  readonly property var scaleOptions: [
+  readonly property real maxScale: 2.0
+
+  readonly property var allScaleOptions: [
     { "key": "0.75", "name": "75%", "scale": 0.75 },
     { "key": "1", "name": "100%", "scale": 1.0 },
     { "key": "1.25", "name": "125%", "scale": 1.25 },
@@ -22,6 +24,8 @@ ColumnLayout {
     { "key": "2.5", "name": "250%", "scale": 2.5 },
     { "key": "3", "name": "300%", "scale": 3.0 }
   ]
+
+  readonly property var scaleOptions: allScaleOptions.filter(o => o.scale <= maxScale)
 
   NLabel {
     label: I18n.tr("panels.display.scale-title")

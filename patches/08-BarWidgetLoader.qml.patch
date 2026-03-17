@@ -1,0 +1,20 @@
+--- a/Modules/Bar/Extras/BarWidgetLoader.qml
++++ b/Modules/Bar/Extras/BarWidgetLoader.qml
+@@ -14,6 +14,17 @@
+   readonly property string section: widgetProps ? (widgetProps.section || "") : ""
+   readonly property int sectionIndex: widgetProps ? (widgetProps.sectionWidgetIndex || 0) : 0
+
++  // Drag reorder: visual displacement offset animated via Behavior
++  property real visualOffset: 0
++  // Controls whether offset changes animate (true) or snap instantly (false for cancel)
++  property bool animateOffset: true
++  Behavior on visualOffset {
++    enabled: animateOffset
++    NumberAnimation { duration: 150; easing.type: Easing.OutQuad }
++  }
++  // Apply offset via transform so it works inside RowLayout/ColumnLayout
++  transform: Translate { x: isVerticalBar ? 0 : visualOffset; y: isVerticalBar ? visualOffset : 0 }
++
+   // Store registration key at registration time so unregistration always uses the correct key,
+   // even if binding properties (section, sectionIndex) have changed by destruction time
+   property string _regScreen: ""

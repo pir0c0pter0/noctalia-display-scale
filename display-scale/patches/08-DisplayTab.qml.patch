@@ -1,0 +1,27 @@
+--- a/Modules/Panels/Settings/Tabs/Display/DisplayTab.qml
++++ b/Modules/Panels/Settings/Tabs/Display/DisplayTab.qml
+@@ -76,6 +76,16 @@
+       tabIndex: 2
+       checked: subTabBar.currentIndex === 2
+     }
++    NTabButton {
++      text: I18n.tr("panels.display.focus-ring-tab")
++      tabIndex: 3
++      checked: subTabBar.currentIndex === 3
++    }
++    NTabButton {
++      text: I18n.tr("panels.display.gaps-tab")
++      tabIndex: 4
++      checked: subTabBar.currentIndex === 4
++    }
+   }
+
+   Item {
+@@ -93,5 +103,7 @@
+       onCheckWlsunset: wlsunsetCheck.running = true
+     }
+     ScaleSubTab {}
++    FocusRingSubTab {}
++    GapsSubTab {}
+   }
+ }

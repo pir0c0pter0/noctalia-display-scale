@@ -1,0 +1,9 @@
+--- a/Modules/Panels/Settings/SettingsPanel.qml
++++ b/Modules/Panels/Settings/SettingsPanel.qml
+@@ -92,4 +92,5 @@
+     System,
+     UserInterface,
+-    Wallpaper
++    Wallpaper,
++    Spotify
+   }

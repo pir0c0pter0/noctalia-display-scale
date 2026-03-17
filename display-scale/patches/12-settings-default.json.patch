@@ -1,0 +1,9 @@
+--- a/Assets/settings-default.json
++++ b/Assets/settings-default.json
+@@ -485,6 +485,8 @@
+   "display": {
+-    "outputScales": {}
++    "outputScales": {},
++    "focusRingWidth": 2,
++    "gaps": 8
+   },

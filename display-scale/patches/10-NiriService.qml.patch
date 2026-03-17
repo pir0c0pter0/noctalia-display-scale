@@ -1,0 +1,37 @@
+--- a/Services/Compositor/NiriService.qml
++++ b/Services/Compositor/NiriService.qml
+@@ -534,6 +534,34 @@
+     }
+   }
+
++  function setFocusRingWidth(width) {
++    try {
++      var cmd = "sed -i '/^\\s*focus-ring\\s*{/,/}/ s/^\\(\\s*\\)width [0-9]\\+/\\1width " + width + "/' ~/.config/niri/config.kdl && niri msg action load-config-file";
++      Quickshell.execDetached(["sh", "-c", cmd]);
++      Logger.i("NiriService", "Setting focus-ring width to " + width);
++    } catch (e) {
++      Logger.e("NiriService", "Failed to set focus-ring width:", e);
++    }
++  }
++
++  function setGaps(gaps) {
++    try {
++      var cmd = "sed -i 's/^\\s*gaps [0-9]\\+/    gaps " + gaps + "/' ~/.config/niri/config.kdl && niri msg action load-config-file";
++      Quickshell.execDetached(["sh", "-c", cmd]);
++      Logger.i("NiriService", "Setting gaps to " + gaps);
++    } catch (e) {
++      Logger.e("NiriService", "Failed to set gaps:", e);
++    }
++  }
++
++  function applyLayoutSettings(focusRingWidth, gaps) {
++    try {
++      var cmd = "sed -i -e 's/^\\s*gaps [0-9]\\+/    gaps " + gaps + "/' -e '/^\\s*focus-ring\\s*{/,/}/ s/^\\(\\s*\\)width [0-9]\\+/\\1width " + focusRingWidth + "/' ~/.config/niri/config.kdl && niri msg action load-config-file";
++      Quickshell.execDetached(["sh", "-c", cmd]);
++      Logger.i("NiriService", "Applied layout settings: focus-ring=" + focusRingWidth + " gaps=" + gaps);
++    } catch (e) {
++      Logger.e("NiriService", "Failed to apply layout settings:", e);
++    }
++  }
++
+   function spawn(command) {

@@ -1,0 +1,25 @@
+--- a/Assets/Translations/en.json
++++ b/Assets/Translations/en.json
+@@ -1755,7 +1755,21 @@
+       "view-mode-cycle-tooltip": "View mode: {mode} (click to change)",
+       "view-mode-recursive": "Flattened subdirectories",
+       "view-mode-single": "Root directory"
+-    }
++    },
++    "spotify": {
++      "title": "Spotify",
++      "setup-instruction-1": "Spotify Developer App required.",
++      "setup-instruction-2": "1. Go to developer.spotify.com",
++      "setup-instruction-3": "2. Create app, set redirect URI:",
++      "save": "save",
++      "open-dashboard": "open developer dashboard",
++      "setup-ok": "Credentials saved. Authenticating...",
++      "no-device": "no active device — open Spotify on any device",
++      "not-premium": "Spotify Premium required for playback control",
++      "no-track": "no track playing",
++      "no-results": "no results found",
++      "queue-empty": "queue is empty"
++    }
+   },
+   "placeholders": {
+     "add-new-keybind": "Add a new keybind",

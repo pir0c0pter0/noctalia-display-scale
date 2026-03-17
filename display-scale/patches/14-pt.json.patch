@@ -1,0 +1,15 @@
+--- a/Assets/Translations/pt.json
++++ b/Assets/Translations/pt.json
+@@ -1085,6 +1085,16 @@
+       "scale-note": "A escala selecionada é salva e aplicada automaticamente a cada inicialização.",
++      "focus-ring-tab": "Anel de Foco",
++      "focus-ring-title": "Anel de Foco",
++      "focus-ring-description": "Defina a largura do indicador de foco ao redor da janela ativa.",
++      "focus-ring-label": "Largura",
++      "focus-ring-note": "A largura selecionada é salva e aplicada automaticamente a cada inicialização.",
++      "gaps-tab": "Espaçamento",
++      "gaps-title": "Espaçamento entre Janelas",
++      "gaps-description": "Defina o espaçamento entre as janelas organizadas.",
++      "gaps-label": "Tamanho do espaçamento",
++      "gaps-note": "O espaçamento selecionado é salvo e aplicado automaticamente a cada inicialização.",
+       "night-light-auto-schedule-description": "Baseado no horário do pôr do sol e do nascer do sol em <i>{location}</i> — recomendado.",

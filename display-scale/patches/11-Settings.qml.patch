@@ -1,0 +1,8 @@
+--- a/Commons/Settings.qml
++++ b/Commons/Settings.qml
+@@ -704,6 +704,8 @@
+     property JsonObject display: JsonObject {
+       property var outputScales: ({})
++      property int focusRingWidth: 2
++      property int gaps: 8
+     }

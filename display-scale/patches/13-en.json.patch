@@ -1,0 +1,15 @@
+--- a/Assets/Translations/en.json
++++ b/Assets/Translations/en.json
+@@ -1085,6 +1085,16 @@
+       "scale-note": "The selected scale is saved and applied automatically on every startup.",
++      "focus-ring-tab": "Focus Ring",
++      "focus-ring-title": "Focus Ring",
++      "focus-ring-description": "Set the width of the focus indicator around the active window.",
++      "focus-ring-label": "Width",
++      "focus-ring-note": "The selected width is saved and applied automatically on every startup.",
++      "gaps-tab": "Gaps",
++      "gaps-title": "Window Gaps",
++      "gaps-description": "Set the spacing between tiled windows.",
++      "gaps-label": "Gap size",
++      "gaps-note": "The selected gap size is saved and applied automatically on every startup.",
+       "night-light-auto-schedule-description": "Based on the sunset and sunrise time in <i>{location}</i> — recommended.",
