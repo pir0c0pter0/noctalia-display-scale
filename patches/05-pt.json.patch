@@ -8,5 +8,5 @@
 +      "scale-description": "Altere o tamanho do texto, dos aplicativos e de outros itens em cada tela.",
 +      "scale-label": "Escala",
 +      "scale-item-description": "Escolha uma porcentagem para redimensionar tudo nesta tela.",
-+      "scale-note": "As alterações são aplicadas temporariamente. Para torná-las permanentes, atualize a escala no arquivo de configuração do compositor.",
++      "scale-note": "A escala selecionada é salva e aplicada automaticamente a cada inicialização.",
        "night-light-auto-schedule-description": "Baseado no horário do pôr do sol e do nascer do sol em <i>{location}</i> — recomendado.",

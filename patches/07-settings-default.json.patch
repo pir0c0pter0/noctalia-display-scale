@@ -1,0 +1,8 @@
+--- a/Assets/settings-default.json
++++ b/Assets/settings-default.json
+@@ -483,6 +483,9 @@
+   },
++  "display": {
++    "outputScales": {}
++  },
+   "brightness": {

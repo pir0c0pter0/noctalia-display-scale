@@ -8,5 +8,5 @@
 +      "scale-description": "Change the size of text, apps, and other items on each display.",
 +      "scale-label": "Scale",
 +      "scale-item-description": "Choose a percentage to resize everything on this display.",
-+      "scale-note": "Changes are applied temporarily. To make them permanent, update the scale in your compositor config file.",
++      "scale-note": "The selected scale is saved and applied automatically on every startup.",
        "night-light-auto-schedule-description": "Based on the sunset and sunrise time in <i>{location}</i> — recommended.",

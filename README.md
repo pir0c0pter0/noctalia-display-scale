@@ -6,7 +6,7 @@ Feature contribution for [Noctalia Shell](https://github.com/nicop2000/noctalia-
 
 **Merge this feature into the official Noctalia Shell project.**
 
-This adds a "Scale" subtab to **Settings > Display** that allows users to change the display scale per monitor using a percentage-based dropdown (75% - 300%), similar to Windows display settings.
+This adds a "Scale" subtab to **Settings > Display** that allows users to change the display scale per monitor using a percentage-based dropdown (75% - 300%), similar to Windows display settings. The selected scale persists across reboots.
 
 ## Preview
 
@@ -37,10 +37,12 @@ Each connected monitor is shown with its name, resolution, and current scale. A 
 | Patch | Target file | Description |
 |-------|-------------|-------------|
 | `01-DisplayTab.qml.patch` | `Modules/Panels/Settings/Tabs/Display/DisplayTab.qml` | Adds the "Scale" tab button and includes `ScaleSubTab` |
-| `02-CompositorService.qml.patch` | `Services/Compositor/CompositorService.qml` | Adds `setOutputScale()` facade function |
+| `02-CompositorService.qml.patch` | `Services/Compositor/CompositorService.qml` | Adds `setOutputScale()` with persistence and `applySavedScales()` on startup |
 | `03-NiriService.qml.patch` | `Services/Compositor/NiriService.qml` | Adds `setOutputScale()` using `niri msg output <name> scale <value>` |
 | `04-en.json.patch` | `Assets/Translations/en.json` | English translation keys |
 | `05-pt.json.patch` | `Assets/Translations/pt.json` | Portuguese translation keys |
+| `06-Settings.qml.patch` | `Commons/Settings.qml` | Adds `display.outputScales` settings property |
+| `07-settings-default.json.patch` | `Assets/settings-default.json` | Adds default value for `display.outputScales` |
 
 ## How to apply manually
 
@@ -64,10 +66,11 @@ quickshell -c noctalia-shell
 1. The **ScaleSubTab** iterates over all connected monitors via `Quickshell.screens`
 2. For each monitor, it reads the current scale from `CompositorService.displayScales`
 3. The user selects a percentage from the dropdown
-4. `CompositorService.setOutputScale()` delegates to the compositor backend
+4. `CompositorService.setOutputScale()` delegates to the compositor backend and saves the preference to `Settings.data.display.outputScales`
 5. `NiriService.setOutputScale()` executes `niri msg output <output> scale <value>`
-6. Niri applies the scale change immediately (temporary, survives until config reload)
-7. The outputs are re-queried to update the UI
+6. Niri applies the scale change immediately
+7. The `OutputsChanged` event triggers a refresh to update the UI
+8. On next startup, `CompositorService.applySavedScales()` restores saved scales automatically
 
 ## Compositor support
 
