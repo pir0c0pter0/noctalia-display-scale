@@ -30,7 +30,7 @@ Each connected monitor is shown with its name, resolution, and current scale. A 
 
 ### New file
 
-- `files/Modules/Panels/Settings/Tabs/Display/ScaleSubTab.qml` — The complete scale configuration UI
+- `display-scale/files/Modules/Panels/Settings/Tabs/Display/ScaleSubTab.qml` — The complete scale configuration UI
 
 ### Patches (for existing files)
 
@@ -51,7 +51,7 @@ Each connected monitor is shown with its name, resolution, and current scale. A 
 2. Apply patches:
 ```bash
 cd ~/.config/quickshell/noctalia-shell
-for patch in /path/to/noctalia/patches/*.patch; do
+for patch in /path/to/noctalia/display-scale/patches/*.patch; do
   patch -p1 < "$patch"
 done
 ```
