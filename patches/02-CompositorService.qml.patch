@@ -1,0 +1,17 @@
+--- a/Services/Compositor/CompositorService.qml
++++ b/Services/Compositor/CompositorService.qml
+@@ -303,6 +303,15 @@
+     return 1.0;
+   }
+
++  // Set display scale for a specific output
++  function setOutputScale(outputName, scale) {
++    if (backend && backend.setOutputScale) {
++      backend.setOutputScale(outputName, scale);
++    } else {
++      Logger.w("CompositorService", "Backend does not support setting output scale");
++    }
++  }
++
+   // Public function to get all display info for a specific display
+   function getDisplayInfo(displayName) {
