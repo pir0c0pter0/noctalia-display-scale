@@ -1,0 +1,18 @@
+--- a/Services/Compositor/NiriService.qml
++++ b/Services/Compositor/NiriService.qml
+@@ -527,6 +527,15 @@
+     }
+   }
+
++  function setOutputScale(outputName, scale) {
++    try {
++      Quickshell.execDetached(["niri", "msg", "output", outputName, "scale", scale.toString()]);
++      Logger.i("NiriService", "Setting scale for " + outputName + " to " + scale);
++    } catch (e) {
++      Logger.e("NiriService", "Failed to set output scale:", e);
++    }
++  }
++
+   function spawn(command) {
+     try {
+       const niriCommand = ["niri", "msg", "action", "spawn", "--"].concat(command);

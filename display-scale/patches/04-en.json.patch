@@ -1,0 +1,12 @@
+--- a/Assets/Translations/en.json
++++ b/Assets/Translations/en.json
+@@ -1079,6 +1079,12 @@
+       "monitors-global-brightness-label": "All monitors",
+       "monitors-title": "Per-monitor settings",
++      "scale-tab": "Scale",
++      "scale-title": "Display Scale",
++      "scale-description": "Change the size of text, apps, and other items on each display.",
++      "scale-label": "Scale",
++      "scale-item-description": "Choose a percentage to resize everything on this display.",
++      "scale-note": "The selected scale is saved and applied automatically on every startup.",
+       "night-light-auto-schedule-description": "Based on the sunset and sunrise time in <i>{location}</i> — recommended.",

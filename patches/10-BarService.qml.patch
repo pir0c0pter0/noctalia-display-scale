@@ -1,0 +1,32 @@
+--- a/Services/UI/BarService.qml
++++ b/Services/UI/BarService.qml
+@@ -625,3 +625,29 @@
+     }
+   }
++
++  // Move a widget within a section (reorder) and persist to settings
++  function moveWidget(screenName, section, fromIndex, toIndex) {
++    if (fromIndex === toIndex) return;
++    Logger.d("BarService", "moveWidget:", screenName, section, fromIndex, "→", toIndex);
++
++    if (Settings.hasScreenOverride(screenName, "widgets")) {
++      var overrideWidgets = JSON.parse(JSON.stringify(
++        Settings.getBarWidgetsForScreen(screenName)
++      ));
++      var oArr = overrideWidgets[section];
++      if (!oArr || fromIndex >= oArr.length || toIndex >= oArr.length) return;
++      var oItem = oArr.splice(fromIndex, 1)[0];
++      oArr.splice(toIndex, 0, oItem);
++      Settings.setScreenOverride(screenName, "widgets", overrideWidgets);
++      Settings.saveImmediate();
++    } else {
++      var widgets = Settings.data.bar.widgets;
++      var gArr = widgets[section];
++      if (!gArr || fromIndex >= gArr.length || toIndex >= gArr.length) return;
++      var gItem = gArr.splice(fromIndex, 1)[0];
++      gArr.splice(toIndex, 0, gItem);
++      Settings.saveImmediate();
++    }
++    root.widgetsRevision++;
++  }
+ }
