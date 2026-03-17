@@ -4,7 +4,6 @@ import QtQuick.Layouts
 import Quickshell
 import qs.Commons
 import qs.Services.Compositor
-import qs.Services.UI
 import qs.Widgets
 
 ColumnLayout {
@@ -99,7 +98,7 @@ ColumnLayout {
           model: scaleOptions
           currentKey: currentScaleKey
           onSelected: key => {
-                        CompositorService.setOutputScale(modelData.name, key);
+                        CompositorService.setOutputScale(modelData.name, parseFloat(key));
                       }
         }
       }

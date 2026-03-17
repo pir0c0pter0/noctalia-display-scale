@@ -1,6 +1,6 @@
 --- a/Services/Compositor/NiriService.qml
 +++ b/Services/Compositor/NiriService.qml
-@@ -527,6 +527,17 @@
+@@ -527,6 +527,15 @@
      }
    }
 
@@ -8,8 +8,6 @@
 +    try {
 +      Quickshell.execDetached(["niri", "msg", "output", outputName, "scale", scale.toString()]);
 +      Logger.i("NiriService", "Setting scale for " + outputName + " to " + scale);
-+      // Refresh outputs after a short delay to pick up the new scale
-+      Qt.callLater(queryDisplayScales);
 +    } catch (e) {
 +      Logger.e("NiriService", "Failed to set output scale:", e);
 +    }
