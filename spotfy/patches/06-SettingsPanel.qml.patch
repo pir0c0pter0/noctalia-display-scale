@@ -1,9 +1,12 @@
 --- a/Modules/Panels/Settings/SettingsPanel.qml
 +++ b/Modules/Panels/Settings/SettingsPanel.qml
-@@ -92,4 +92,5 @@
+@@ -91,7 +91,8 @@
+     SessionMenu,
      System,
      UserInterface,
 -    Wallpaper
 +    Wallpaper,
 +    Spotify
    }
+
+   property int requestedTab: SettingsPanel.Tab.General
