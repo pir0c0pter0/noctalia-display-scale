@@ -1,16 +1,21 @@
-# Noctalia Shell - Display Scale Settings
+# Noctalia Shell - Feature Contributions
 
-Feature contribution for [Noctalia Shell](https://github.com/nicop2000/noctalia-shell): a Windows-style display scale configuration panel.
+Feature contributions for [Noctalia Shell](https://github.com/nicop2000/noctalia-shell), a QML/Qt-based Linux desktop shell built on the Quickshell framework.
 
-## Goal
+**Goal: Merge these features into the official Noctalia Shell project.**
 
-**Merge this feature into the official Noctalia Shell project.**
+Each subdirectory is an independent feature module containing new QML files and numbered patches to apply against an existing Noctalia Shell installation.
 
-This adds a "Scale" subtab to **Settings > Display** that allows users to change the display scale per monitor using a percentage-based dropdown (75% - 300%), similar to Windows display settings. The selected scale persists across reboots.
+## Features
 
-## Preview
+### Display Scale (`display-scale/`)
 
-The new **Scale** tab appears alongside the existing **Brightness** and **Night Light** tabs:
+Per-monitor display scale configuration under **Settings > Display > Scale**.
+
+- Percentage-based dropdown (75% - 200%)
+- Max scale configurable via `maxScale` property (default: 200%)
+- Persists across reboots via `Settings.data.display.outputScales`
+- Compositor backend: `niri msg output <name> scale <value>`
 
 | Scale | Percentage |
 |-------|-----------|
@@ -20,62 +25,132 @@ The new **Scale** tab appears alongside the existing **Brightness** and **Night 
 | 1.5   | 150%      |
 | 1.75  | 175%      |
 | 2.0   | 200%      |
-| 2.25  | 225%      |
-| 2.5   | 250%      |
-| 3.0   | 300%      |
 
-Each connected monitor is shown with its name, resolution, and current scale. A dropdown lets the user change the scale in real time.
+### Focus Ring Width (`display-scale/`)
 
-## What's included
+Configure the width of the focus indicator around the active window under **Settings > Display > Focus Ring**.
 
-### New file
+- Spinner control: 0-8px (default: 2px)
+- Persists via `Settings.data.display.focusRingWidth`
+- Edits `~/.config/niri/config.kdl` `focus-ring { width }` and reloads niri
 
-- `display-scale/files/Modules/Panels/Settings/Tabs/Display/ScaleSubTab.qml` — The complete scale configuration UI
+### Window Gaps (`display-scale/`)
 
-### Patches (for existing files)
+Configure spacing between tiled windows under **Settings > Display > Gaps**.
 
-| Patch | Target file | Description |
-|-------|-------------|-------------|
-| `01-DisplayTab.qml.patch` | `Modules/Panels/Settings/Tabs/Display/DisplayTab.qml` | Adds the "Scale" tab button and includes `ScaleSubTab` |
-| `02-CompositorService.qml.patch` | `Services/Compositor/CompositorService.qml` | Adds `setOutputScale()` with persistence and `applySavedScales()` on startup |
-| `03-NiriService.qml.patch` | `Services/Compositor/NiriService.qml` | Adds `setOutputScale()` using `niri msg output <name> scale <value>` |
-| `04-en.json.patch` | `Assets/Translations/en.json` | English translation keys |
-| `05-pt.json.patch` | `Assets/Translations/pt.json` | Portuguese translation keys |
-| `06-Settings.qml.patch` | `Commons/Settings.qml` | Adds `display.outputScales` settings property |
-| `07-settings-default.json.patch` | `Assets/settings-default.json` | Adds default value for `display.outputScales` |
+- Spinner control: 0-32px (default: 8px)
+- Persists via `Settings.data.display.gaps`
+- Edits `~/.config/niri/config.kdl` `layout { gaps }` and reloads niri
 
-## How to apply manually
+### Spotify Plugin (`spotfy/`)
 
-1. Copy `ScaleSubTab.qml` to `Modules/Panels/Settings/Tabs/Display/` in your noctalia-shell directory
+Full Spotify control panel with terminal aesthetic under **Settings > Spotify**.
 
-2. Apply patches:
+- OAuth 2.0 authentication flow
+- Now Playing, Playlists, Search, Queue screens
+- Playback controls (play/pause, next, prev, volume, shuffle, repeat)
+- ASCII animations: equalizer bars, typewriter effects, braille spinners
+- Python backend (`spotify_bridge.py`) via `spotipy`
+- Requires Spotify Premium + Developer App
+
+### Bar Widget Drag Reorder (`widgetsmove/`)
+
+Long-press drag to reorder bar widgets within sections (left, center, right).
+
+- 300ms long-press to initiate drag
+- Ghost overlay via `ShaderEffectSource`
+- Persists new order to `settings.json`
+- Supports horizontal and vertical bar orientations
+
+## Files Structure
+
+```
+display-scale/
+  files/    -- New QML files (ScaleSubTab, FocusRingSubTab, GapsSubTab)
+  patches/  -- Patches 01-14 for existing Noctalia Shell files
+
+spotfy/
+  files/    -- SpotifyTab, screens, components, Python bridge
+  patches/  -- Patches 06-09
+
+widgetsmove/
+  files/    -- BarDragOverlay.qml
+  patches/  -- Patches 01-03 (BarWidgetLoader, Bar, BarService)
+```
+
+## How to Install
+
+### Display Scale + Focus Ring + Gaps
+
 ```bash
+# Copy new files
+cp display-scale/files/Modules/Panels/Settings/Tabs/Display/*.qml \
+   ~/.config/quickshell/noctalia-shell/Modules/Panels/Settings/Tabs/Display/
+
+# Apply patches in order
 cd ~/.config/quickshell/noctalia-shell
 for patch in /path/to/noctalia/display-scale/patches/*.patch; do
   patch -p1 < "$patch"
 done
-```
 
-3. Restart Quickshell:
-```bash
+# Restart
 quickshell -c noctalia-shell
 ```
 
-## How it works
+### Spotify Plugin
 
-1. The **ScaleSubTab** iterates over all connected monitors via `Quickshell.screens`
-2. For each monitor, it reads the current scale from `CompositorService.displayScales`
-3. The user selects a percentage from the dropdown
-4. `CompositorService.setOutputScale()` delegates to the compositor backend and saves the preference to `Settings.data.display.outputScales`
-5. `NiriService.setOutputScale()` executes `niri msg output <output> scale <value>`
-6. Niri applies the scale change immediately
-7. The `OutputsChanged` event triggers a refresh to update the UI
-8. On next startup, `CompositorService.applySavedScales()` restores saved scales automatically
+```bash
+# Install dependencies
+pip install spotipy
 
-## Compositor support
+# Copy files
+cp -r spotfy/files/Modules/Panels/Settings/Tabs/Spotify \
+   ~/.config/quickshell/noctalia-shell/Modules/Panels/Settings/Tabs/
 
-Currently implemented for **Niri** via `niri msg output <output> scale <value>`. The `CompositorService` facade makes it straightforward to add support for other compositors (Hyprland, Sway, etc.) by implementing `setOutputScale()` in their respective service files.
+# Apply patches
+cd ~/.config/quickshell/noctalia-shell
+for patch in /path/to/noctalia/spotfy/patches/*.patch; do
+  patch -p1 < "$patch"
+done
+```
+
+### Bar Widget Drag Reorder
+
+```bash
+# Copy files
+cp widgetsmove/files/Modules/Bar/Extras/BarDragOverlay.qml \
+   ~/.config/quickshell/noctalia-shell/Modules/Bar/Extras/
+
+# Apply patches
+cd ~/.config/quickshell/noctalia-shell
+for patch in /path/to/noctalia/widgetsmove/patches/*.patch; do
+  patch -p1 < "$patch"
+done
+```
+
+## Architecture
+
+### Display Settings Flow
+
+```
+UI (ScaleSubTab / FocusRingSubTab / GapsSubTab)
+  └── CompositorService (facade)
+        ├── Persists to Settings.data.display.*
+        └── Delegates to NiriService
+              ├── Scale: niri msg output <name> scale <value>
+              └── Focus Ring / Gaps: sed on config.kdl + niri msg action load-config-file
+
+On startup: CompositorService restores all saved settings automatically.
+```
+
+## Compositor Support
+
+Currently implemented for **Niri**. The `CompositorService` facade makes it straightforward to add backends for other compositors (Hyprland, Sway, etc.).
+
+## Translations
+
+All features include English and Portuguese translations.
 
 ## License
 
-This contribution follows the same license as the Noctalia Shell project.
+These contributions follow the same license as the Noctalia Shell project.
