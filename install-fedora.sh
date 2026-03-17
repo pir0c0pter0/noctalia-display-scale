@@ -101,11 +101,54 @@ target = os.path.join(SD, "Services/Compositor/CompositorService.qml")
 with open(target) as f:
     content = f.read()
 
-# 3a. Adicionar call após backend.initialize()
-content = content.replace(
-    "        backend.initialize();\n",
-    "        backend.initialize();\n        applySavedLayoutSettings();\n"
-)
+# 3a. Substituir backendLoader.onLoaded para verificar Settings.isLoaded
+# e adicionar Connections para resolver race condition
+old_loader = """    onLoaded: {
+      if (item) {
+        if (isScroll) {
+          item.msgCommand = "scrollmsg";
+        }
+        root.backend = item;
+        setupBackendConnections();
+        backend.initialize();
+      }
+    }
+  }"""
+new_loader = """    onLoaded: {
+      if (item) {
+        if (isScroll) {
+          item.msgCommand = "scrollmsg";
+        }
+        root.backend = item;
+        setupBackendConnections();
+        backend.initialize();
+        // Apply settings now if already loaded, otherwise wait for signal
+        if (Settings.isLoaded) {
+          applySavedScales();
+          applySavedLayoutSettings();
+        }
+      }
+    }
+  }
+
+  Connections {
+    target: Settings
+    function onSettingsLoaded() {
+      if (backend) {
+        applySavedScales();
+        applySavedLayoutSettings();
+      }
+    }
+  }"""
+
+if old_loader in content:
+    content = content.replace(old_loader, new_loader)
+else:
+    # fallback: just add calls after initialize()
+    content = content.replace(
+        "        backend.initialize();\n",
+        "        backend.initialize();\n        if (Settings.isLoaded) { applySavedScales(); applySavedLayoutSettings(); }\n"
+    )
 
 # 3b. Adicionar função antes de "// Hyprland backend component"
 func = """
@@ -132,11 +175,11 @@ content = content.replace(
 with open(target, "w") as f:
     f.write(content)
 PYEOF
-  ok "applySavedLayoutSettings() adicionado"
+  ok "applySavedLayoutSettings() + Connections adicionados"
 fi
 
 if grep -qF "function setFocusRingWidth" "$TARGET" 2>/dev/null; then
-  skip "setFocusRingWidth() e setGaps()"
+  skip "setFocusRingWidth(), setGaps(), setOutputScale(), applySavedScales()"
 else
   python3 << 'PYEOF'
 import os
@@ -161,6 +204,39 @@ funcs = """
     }
   }
 
+  // Set display scale and persist as JSON string (property string serializes correctly)
+  function setOutputScale(outputName, scale) {
+    if (backend && backend.setOutputScale) {
+      backend.setOutputScale(outputName, scale);
+      var saved = {};
+      try { saved = JSON.parse(Settings.data.display.outputScales || "{}"); } catch(e) {}
+      saved[outputName] = scale;
+      Settings.data.display.outputScales = JSON.stringify(saved);
+    } else {
+      Logger.w("CompositorService", "Backend does not support setting output scale");
+    }
+  }
+
+  // Apply saved display scales on startup (reads JSON string)
+  function applySavedScales() {
+    try {
+      var saved = {};
+      try { saved = JSON.parse(Settings.data.display.outputScales || "{}"); } catch(e) { return; }
+      const outputs = Object.keys(saved);
+      if (outputs.length === 0) return;
+      for (var i = 0; i < outputs.length; i++) {
+        const outputName = outputs[i];
+        const scale = saved[outputName];
+        if (scale && backend && backend.setOutputScale) {
+          Logger.i("CompositorService", "Restoring scale for " + outputName + ": " + scale);
+          backend.setOutputScale(outputName, scale);
+        }
+      }
+    } catch (error) {
+      Logger.e("CompositorService", "Failed to apply saved scales:", error);
+    }
+  }
+
 """
 content = content.replace(
     "  // Public function to get all display info",
@@ -170,7 +246,7 @@ content = content.replace(
 with open(target, "w") as f:
     f.write(content)
 PYEOF
-  ok "setFocusRingWidth() e setGaps() adicionados"
+  ok "setFocusRingWidth(), setGaps(), setOutputScale(), applySavedScales() adicionados"
 fi
 
 # ── 4. NiriService.qml ───────────────────────────────────────────────────
@@ -264,15 +340,16 @@ target = os.path.join(SD, "Commons/Settings.qml")
 with open(target) as f:
     content = f.read()
 
+# Use property string for outputScales so JsonAdapter persists it correctly
 if "property var outputScales" in content:
     content = content.replace(
         "      property var outputScales: ({})\n    }",
-        "      property var outputScales: ({})\n      property int focusRingWidth: 2\n      property int gaps: 8\n    }"
+        "      property string outputScales: \"{}\"\n      property int focusRingWidth: 2\n      property int gaps: 8\n    }"
     )
 else:
     content = content.replace(
         "    property JsonObject colorSchemes:",
-        "    property JsonObject display: JsonObject {\n      property var outputScales: ({})\n      property int focusRingWidth: 2\n      property int gaps: 8\n    }\n\n    property JsonObject colorSchemes:"
+        "    property JsonObject display: JsonObject {\n      property string outputScales: \"{}\"\n      property int focusRingWidth: 2\n      property int gaps: 8\n    }\n\n    property JsonObject colorSchemes:"
     )
 
 with open(target, "w") as f:
@@ -298,17 +375,19 @@ target = os.path.join(SD, "Assets/settings-default.json")
 with open(target) as f:
     data = json.load(f)
 
+# outputScales stored as JSON string, not object
 if "display" in data:
+    data["display"]["outputScales"] = "{}"
     data["display"]["focusRingWidth"] = 2
     data["display"]["gaps"] = 8
 else:
     new_data = {}
     for k, v in data.items():
         if k == "brightness":
-            new_data["display"] = {"outputScales": {}, "focusRingWidth": 2, "gaps": 8}
+            new_data["display"] = {"outputScales": "{}", "focusRingWidth": 2, "gaps": 8}
         new_data[k] = v
     if "display" not in new_data:
-        new_data["display"] = {"outputScales": {}, "focusRingWidth": 2, "gaps": 8}
+        new_data["display"] = {"outputScales": "{}", "focusRingWidth": 2, "gaps": 8}
     data = new_data
 
 with open(target, "w") as f:

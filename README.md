@@ -109,6 +109,10 @@ Both scripts are idempotent — they skip already-applied changes, so you can re
 
 After install, `fix-niri-functions.py` (Arch) or `fix-niri-functions-fedora.py` (Fedora) is run automatically to patch NiriService for modular niri configs (split `.kdl` files with includes).
 
+> **Note:** The Fedora script includes two persistence fixes not present in the Arch version:
+> - `outputScales` stored as `property string` (JSON-serialized) instead of `property var`, so the `JsonAdapter` persists it correctly across reboots.
+> - `Connections { target: Settings; onSettingsLoaded }` in `CompositorService` to avoid a startup race condition where scales were applied before the settings file was read from disk.
+
 ### Key differences between CachyOS and Fedora
 
 | | CachyOS / Arch | Fedora |
