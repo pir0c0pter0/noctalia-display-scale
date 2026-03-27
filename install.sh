@@ -123,11 +123,115 @@ PYEOF
   fi
 fi
 
+# ── 2b. DisplayTab.qml — adicionar NTabButtons ──────────────────────────
+if grep -q 'display.scale-tab' "$TARGET" 2>/dev/null; then
+  skip "NTabButtons (Scale, Focus Ring, Gaps)"
+else
+  sudo python3 << 'PYEOF'
+with open("/etc/xdg/quickshell/noctalia-shell/Modules/Panels/Settings/Tabs/Display/DisplayTab.qml") as f:
+    content = f.read()
+
+old = '''    NTabButton {
+      text: I18n.tr("common.night-light")
+      tabIndex: 1
+      checked: subTabBar.currentIndex === 1
+    }
+  }'''
+
+new = '''    NTabButton {
+      text: I18n.tr("common.night-light")
+      tabIndex: 1
+      checked: subTabBar.currentIndex === 1
+    }
+    NTabButton {
+      text: I18n.tr("panels.display.scale-tab")
+      tabIndex: 2
+      checked: subTabBar.currentIndex === 2
+    }
+    NTabButton {
+      text: I18n.tr("panels.display.focus-ring-tab")
+      tabIndex: 3
+      checked: subTabBar.currentIndex === 3
+    }
+    NTabButton {
+      text: I18n.tr("panels.display.gaps-tab")
+      tabIndex: 4
+      checked: subTabBar.currentIndex === 4
+    }
+  }'''
+
+if old in content:
+    content = content.replace(old, new)
+    with open("/etc/xdg/quickshell/noctalia-shell/Modules/Panels/Settings/Tabs/Display/DisplayTab.qml", "w") as f:
+        f.write(content)
+    print("OK")
+else:
+    print("FAIL - NTabButtons not found (may already be patched)")
+    exit(1)
+PYEOF
+  if [ $? -eq 0 ]; then
+    ok "NTabButtons (Scale, Focus Ring, Gaps) adicionados"
+  else
+    fail "NTabButtons — edite manualmente"
+  fi
+fi
+
 # ── 3. CompositorService.qml ─────────────────────────────────────────────
 echo ""
 echo ">> Patching CompositorService.qml..."
 
 TARGET="$SHELL_DIR/Services/Compositor/CompositorService.qml"
+
+if grep -q "applySavedScales" "$TARGET" 2>/dev/null; then
+  skip "applySavedScales()"
+else
+  sudo python3 << 'PYEOF'
+with open("/etc/xdg/quickshell/noctalia-shell/Services/Compositor/CompositorService.qml") as f:
+    content = f.read()
+
+# 3a0. Adicionar call applySavedScales() após backend.initialize()
+content = content.replace(
+    "        backend.initialize();\n",
+    "        backend.initialize();\n        applySavedScales();\n"
+)
+
+# 3a0b. Adicionar função applySavedScales
+func_scales = """
+  // Apply saved display scales on startup
+  function applySavedScales() {
+    try {
+      const saved = Settings.data.display.outputScales;
+      if (!saved || typeof saved !== 'object')
+        return;
+
+      const outputs = Object.keys(saved);
+      if (outputs.length === 0)
+        return;
+
+      for (var i = 0; i < outputs.length; i++) {
+        const outputName = outputs[i];
+        const scale = saved[outputName];
+        if (scale && backend && backend.setOutputScale) {
+          Logger.i("CompositorService", "Restoring scale for " + outputName + ": " + scale);
+          backend.setOutputScale(outputName, scale);
+        }
+      }
+    } catch (error) {
+      Logger.e("CompositorService", "Failed to apply saved scales:", error);
+    }
+  }
+
+"""
+content = content.replace(
+    "  // Hyprland backend component",
+    func_scales + "  // Hyprland backend component"
+)
+
+with open("/etc/xdg/quickshell/noctalia-shell/Services/Compositor/CompositorService.qml", "w") as f:
+    f.write(content)
+PYEOF
+  ok "applySavedScales() adicionado"
+fi
 
 if grep -q "applySavedLayoutSettings" "$TARGET" 2>/dev/null; then
   skip "applySavedLayoutSettings()"
@@ -136,10 +240,10 @@ else
 with open("/etc/xdg/quickshell/noctalia-shell/Services/Compositor/CompositorService.qml") as f:
     content = f.read()
 
-# 3a. Adicionar call após backend.initialize()
+# 3a. Adicionar call applySavedLayoutSettings() após applySavedScales()
 content = content.replace(
-    "        backend.initialize();\n",
-    "        backend.initialize();\n        applySavedLayoutSettings();\n"
+    "        applySavedScales();\n",
+    "        applySavedScales();\n        applySavedLayoutSettings();\n"
 )
 
 # 3b. Adicionar função antes de "// Hyprland backend component"
@@ -168,6 +272,40 @@ with open("/etc/xdg/quickshell/noctalia-shell/Services/Compositor/CompositorServ
     f.write(content)
 PYEOF
   ok "applySavedLayoutSettings() adicionado"
+fi
+
+if grep -qF "function setOutputScale" "$TARGET" 2>/dev/null; then
+  skip "setOutputScale()"
+else
+  sudo python3 << 'PYEOF'
+with open("/etc/xdg/quickshell/noctalia-shell/Services/Compositor/CompositorService.qml") as f:
+    content = f.read()
+
+func = """
+  // Set display scale for a specific output and persist to settings
+  function setOutputScale(outputName, scale) {
+    if (backend && backend.setOutputScale) {
+      backend.setOutputScale(outputName, scale);
+
+      // Persist to settings
+      var saved = Settings.data.display.outputScales || {};
+      saved[outputName] = scale;
+      Settings.data.display.outputScales = saved;
+    } else {
+      Logger.w("CompositorService", "Backend does not support setting output scale");
+    }
+  }
+
+"""
+content = content.replace(
+    "  // Public function to get all display info",
+    func + "  // Public function to get all display info"
+)
+
+with open("/etc/xdg/quickshell/noctalia-shell/Services/Compositor/CompositorService.qml", "w") as f:
+    f.write(content)
+PYEOF
+  ok "setOutputScale() adicionado"
 fi
 
 if grep -qF "function setFocusRingWidth" "$TARGET" 2>/dev/null; then
@@ -209,6 +347,35 @@ echo ""
 echo ">> Patching NiriService.qml..."
 
 TARGET="$SHELL_DIR/Services/Compositor/NiriService.qml"
+
+if grep -qF "function setOutputScale" "$TARGET" 2>/dev/null; then
+  skip "setOutputScale() no NiriService"
+else
+  sudo python3 << 'PYEOF'
+with open("/etc/xdg/quickshell/noctalia-shell/Services/Compositor/NiriService.qml") as f:
+    content = f.read()
+
+func = """
+  function setOutputScale(outputName, scale) {
+    try {
+      Quickshell.execDetached(["niri", "msg", "output", outputName, "scale", scale.toString()]);
+      Logger.i("NiriService", "Setting scale for " + outputName + " to " + scale);
+    } catch (e) {
+      Logger.e("NiriService", "Failed to set output scale:", e);
+    }
+  }
+
+"""
+content = content.replace(
+    "  function spawn(command)",
+    func + "  function spawn(command)"
+)
+
+with open("/etc/xdg/quickshell/noctalia-shell/Services/Compositor/NiriService.qml", "w") as f:
+    f.write(content)
+PYEOF
+  ok "setOutputScale() adicionado ao NiriService"
+fi
 
 if grep -qF "function setFocusRingWidth" "$TARGET" 2>/dev/null; then
   skip "funções focus-ring/gaps"
@@ -472,9 +639,10 @@ echo "Reiniciando quickshell..."
 # Rodar como o usuário real (não root)
 REAL_USER="${SUDO_USER:-$USER}"
 sudo -u "$REAL_USER" bash -c '
-  pkill -x quickshell 2>/dev/null || true
-  while pgrep -x quickshell >/dev/null 2>&1; do sleep 0.2; done
-  nohup quickshell -c noctalia-shell >/dev/null 2>&1 &
+  pkill -9 qs 2>/dev/null || true
+  pkill -9 quickshell 2>/dev/null || true
+  sleep 1
+  nohup qs -c noctalia-shell >/dev/null 2>&1 &
   disown
 '
 ok "Quickshell reiniciado"

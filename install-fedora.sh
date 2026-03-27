@@ -84,6 +84,64 @@ PYEOF
   fi
 fi
 
+# ── 2b. DisplayTab.qml — adicionar NTabButtons ──────────────────────────
+if grep -q 'panels.display.scale-tab' "$TARGET" 2>/dev/null; then
+  skip "NTabButtons (Scale, Focus Ring, Gaps)"
+else
+  export SHELL_DIR
+  python3 << 'PYEOF'
+import os
+SD = os.environ["SHELL_DIR"]
+target = os.path.join(SD, "Modules/Panels/Settings/Tabs/Display/DisplayTab.qml")
+
+with open(target) as f:
+    content = f.read()
+
+old = '''    NTabButton {
+      text: I18n.tr("common.night-light")
+      tabIndex: 1
+      checked: subTabBar.currentIndex === 1
+    }
+  }'''
+
+new = '''    NTabButton {
+      text: I18n.tr("common.night-light")
+      tabIndex: 1
+      checked: subTabBar.currentIndex === 1
+    }
+    NTabButton {
+      text: I18n.tr("panels.display.scale-tab")
+      tabIndex: 2
+      checked: subTabBar.currentIndex === 2
+    }
+    NTabButton {
+      text: I18n.tr("panels.display.focus-ring-tab")
+      tabIndex: 3
+      checked: subTabBar.currentIndex === 3
+    }
+    NTabButton {
+      text: I18n.tr("panels.display.gaps-tab")
+      tabIndex: 4
+      checked: subTabBar.currentIndex === 4
+    }
+  }'''
+
+if old in content:
+    content = content.replace(old, new)
+    with open(target, "w") as f:
+        f.write(content)
+    print("OK")
+else:
+    print("FAIL - NTabButtons not found (may already be patched)")
+    exit(1)
+PYEOF
+  if [ $? -eq 0 ]; then
+    ok "NTabButtons (Scale, Focus Ring, Gaps) adicionados"
+  else
+    fail "NTabButtons — edite manualmente"
+  fi
+fi
+
 # ── 3. CompositorService.qml ─────────────────────────────────────────────
 echo ""
 echo ">> Patching CompositorService.qml..."
