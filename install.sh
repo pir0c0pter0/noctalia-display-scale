@@ -13,45 +13,6 @@ ok()   { echo -e "  ${GREEN}✓${NC} $1"; }
 skip() { echo -e "  ${YELLOW}→${NC} $1 (já existe)"; }
 fail() { echo -e "  ${RED}✗${NC} $1"; }
 
-# Helper: insere texto DEPOIS de uma linha que contém o padrão (primeira ocorrência)
-# Uso: insert_after <arquivo> <padrão-grep> <texto-a-inserir>
-insert_after() {
-  local file="$1" pattern="$2" text="$3"
-  sudo python3 -c "
-import sys
-lines = open('$file').readlines()
-out = []
-done = False
-for line in lines:
-    out.append(line)
-    if not done and '$pattern' in line:
-        out.append('$text\n')
-        done = True
-if not done:
-    sys.exit(1)
-open('$file', 'w').writelines(out)
-" 2>/dev/null
-}
-
-# Helper: insere texto ANTES de uma linha que contém o padrão (primeira ocorrência)
-insert_before() {
-  local file="$1" pattern="$2" text="$3"
-  sudo python3 -c "
-import sys
-lines = open('$file').readlines()
-out = []
-done = False
-for line in lines:
-    if not done and '$pattern' in line:
-        out.append('$text\n')
-        done = True
-    out.append(line)
-if not done:
-    sys.exit(1)
-open('$file', 'w').writelines(out)
-" 2>/dev/null
-}
-
 echo "=== Instalando noctalia-display-scale ==="
 echo ""
 
@@ -90,7 +51,6 @@ else
 with open("/etc/xdg/quickshell/noctalia-shell/Modules/Panels/Settings/Tabs/Display/DisplayTab.qml") as f:
     content = f.read()
 
-# Inserir os 3 subtabs depois do fechamento do NightLightSubTab no NTabView
 old = """    NightLightSubTab {
       timeOptions: timeOptions
       onCheckWlsunset: wlsunsetCheck.running = true
@@ -177,42 +137,74 @@ PYEOF
 fi
 
 # ── 3. CompositorService.qml ─────────────────────────────────────────────
+# Tudo num único bloco para evitar inserções na posição errada
 echo ""
 echo ">> Patching CompositorService.qml..."
 
 TARGET="$SHELL_DIR/Services/Compositor/CompositorService.qml"
 
 if grep -q "applySavedScales" "$TARGET" 2>/dev/null; then
-  skip "applySavedScales()"
+  skip "applySavedScales() (já patcheado)"
 else
   sudo python3 << 'PYEOF'
 with open("/etc/xdg/quickshell/noctalia-shell/Services/Compositor/CompositorService.qml") as f:
     content = f.read()
 
-# 3a0. Adicionar call applySavedScales() com check Settings.isLoaded
-content = content.replace(
-    "        backend.initialize();\n",
-    "        backend.initialize();\n        if (Settings.isLoaded) { applySavedScales(); }\n"
-)
+# ── 3a. Substituir onLoaded para adicionar Settings.isLoaded check ──
+# E adicionar Connections DEPOIS do fechamento do Loader (não dentro do Component.onCompleted!)
+old_loader = """    onLoaded: {
+      if (item) {
+        if (isScroll) {
+          item.msgCommand = "scrollmsg";
+        }
+        root.backend = item;
+        setupBackendConnections();
+        backend.initialize();
+      }
+    }
+  }"""
 
-# 3a0a. Adicionar Connections para resolver race condition
-connections_block = """
+new_loader = """    onLoaded: {
+      if (item) {
+        if (isScroll) {
+          item.msgCommand = "scrollmsg";
+        }
+        root.backend = item;
+        setupBackendConnections();
+        backend.initialize();
+        // Apply settings now if already loaded, otherwise wait for signal
+        if (Settings.isLoaded) {
+          applySavedScales();
+          applySavedLayoutSettings();
+        }
+      }
+    }
+  }
+
+  // Restore saved settings when Settings finishes loading from disk
   Connections {
     target: Settings
     function onSettingsLoaded() {
       if (backend) {
         applySavedScales();
+        applySavedLayoutSettings();
       }
     }
-  }
-"""
-content = content.replace(
-    "  // Load display scales from ShellState",
-    connections_block + "\n  // Load display scales from ShellState"
-)
+  }"""
 
-# 3a0b. Adicionar função applySavedScales (lê JSON string)
-func_scales = """
+if old_loader in content:
+    content = content.replace(old_loader, new_loader)
+else:
+    print("WARN: onLoaded block not found for replacement, using fallback")
+    content = content.replace(
+        "        backend.initialize();\n",
+        "        backend.initialize();\n"
+        "        // Apply settings now if already loaded, otherwise wait for signal\n"
+        "        if (Settings.isLoaded) { applySavedScales(); applySavedLayoutSettings(); }\n"
+    )
+
+# ── 3b. Adicionar funções antes de "// Hyprland backend component" ──
+functions = '''
   // Apply saved display scales on startup (reads JSON string)
   function applySavedScales() {
     try {
@@ -236,39 +228,6 @@ func_scales = """
     }
   }
 
-"""
-content = content.replace(
-    "  // Hyprland backend component",
-    func_scales + "  // Hyprland backend component"
-)
-
-with open("/etc/xdg/quickshell/noctalia-shell/Services/Compositor/CompositorService.qml", "w") as f:
-    f.write(content)
-PYEOF
-  ok "applySavedScales() adicionado"
-fi
-
-if grep -q "applySavedLayoutSettings" "$TARGET" 2>/dev/null; then
-  skip "applySavedLayoutSettings()"
-else
-  sudo python3 << 'PYEOF'
-with open("/etc/xdg/quickshell/noctalia-shell/Services/Compositor/CompositorService.qml") as f:
-    content = f.read()
-
-# 3a. Adicionar call applySavedLayoutSettings() junto com applySavedScales()
-content = content.replace(
-    "        if (Settings.isLoaded) { applySavedScales(); }\n",
-    "        if (Settings.isLoaded) { applySavedScales(); applySavedLayoutSettings(); }\n"
-)
-
-# 3a1. Atualizar Connections para incluir applySavedLayoutSettings
-content = content.replace(
-    "        applySavedScales();\n      }\n    }\n  }\n",
-    "        applySavedScales();\n        applySavedLayoutSettings();\n      }\n    }\n  }\n"
-)
-
-# 3b. Adicionar função antes de "// Hyprland backend component"
-func = """
   // Apply saved layout settings (gaps, focus-ring) on startup
   function applySavedLayoutSettings() {
     try {
@@ -283,26 +242,14 @@ func = """
     }
   }
 
-"""
+'''
 content = content.replace(
     "  // Hyprland backend component",
-    func + "  // Hyprland backend component"
+    functions + "  // Hyprland backend component"
 )
 
-with open("/etc/xdg/quickshell/noctalia-shell/Services/Compositor/CompositorService.qml", "w") as f:
-    f.write(content)
-PYEOF
-  ok "applySavedLayoutSettings() adicionado"
-fi
-
-if grep -qF "function setOutputScale" "$TARGET" 2>/dev/null; then
-  skip "setOutputScale()"
-else
-  sudo python3 << 'PYEOF'
-with open("/etc/xdg/quickshell/noctalia-shell/Services/Compositor/CompositorService.qml") as f:
-    content = f.read()
-
-func = """
+# ── 3c. Adicionar setOutputScale, setFocusRingWidth, setGaps ──
+setters = '''
   // Set display scale for a specific output and persist to settings
   function setOutputScale(outputName, scale) {
     if (backend && backend.setOutputScale) {
@@ -318,26 +265,6 @@ func = """
     }
   }
 
-"""
-content = content.replace(
-    "  // Public function to get all display info",
-    func + "  // Public function to get all display info"
-)
-
-with open("/etc/xdg/quickshell/noctalia-shell/Services/Compositor/CompositorService.qml", "w") as f:
-    f.write(content)
-PYEOF
-  ok "setOutputScale() adicionado"
-fi
-
-if grep -qF "function setFocusRingWidth" "$TARGET" 2>/dev/null; then
-  skip "setFocusRingWidth() e setGaps()"
-else
-  sudo python3 << 'PYEOF'
-with open("/etc/xdg/quickshell/noctalia-shell/Services/Compositor/CompositorService.qml") as f:
-    content = f.read()
-
-funcs = """
   function setFocusRingWidth(width) {
     if (backend && backend.setFocusRingWidth) {
       backend.setFocusRingWidth(width);
@@ -352,16 +279,21 @@ funcs = """
     }
   }
 
-"""
+'''
 content = content.replace(
     "  // Public function to get all display info",
-    funcs + "  // Public function to get all display info"
+    setters + "  // Public function to get all display info"
 )
 
 with open("/etc/xdg/quickshell/noctalia-shell/Services/Compositor/CompositorService.qml", "w") as f:
     f.write(content)
+print("OK")
 PYEOF
-  ok "setFocusRingWidth() e setGaps() adicionados"
+  if [ $? -eq 0 ]; then
+    ok "CompositorService.qml patcheado (scales + layout + Connections)"
+  else
+    fail "CompositorService.qml — edite manualmente"
+  fi
 fi
 
 # ── 4. NiriService.qml ───────────────────────────────────────────────────
@@ -462,15 +394,21 @@ else
 with open("/etc/xdg/quickshell/noctalia-shell/Commons/Settings.qml") as f:
     content = f.read()
 
+# outputScales MUST be property string — property var is NOT persisted by JsonAdapter
 if "property var outputScales" in content:
     content = content.replace(
-        "      property string outputScales: "{}"\n    }",
-        "      property string outputScales: "{}"\n      property int focusRingWidth: 2\n      property int gaps: 8\n    }"
+        "      property var outputScales: ({})\n    }",
+        '      property string outputScales: "{}"\n      property int focusRingWidth: 2\n      property int gaps: 8\n    }'
+    )
+elif "property string outputScales" in content:
+    content = content.replace(
+        '      property string outputScales: "{}"\n    }',
+        '      property string outputScales: "{}"\n      property int focusRingWidth: 2\n      property int gaps: 8\n    }'
     )
 else:
     content = content.replace(
         "    property JsonObject colorSchemes:",
-        "    property JsonObject display: JsonObject {\n      property string outputScales: "{}"\n      property int focusRingWidth: 2\n      property int gaps: 8\n    }\n\n    property JsonObject colorSchemes:"
+        '    property JsonObject display: JsonObject {\n      property string outputScales: "{}"\n      property int focusRingWidth: 2\n      property int gaps: 8\n    }\n\n    property JsonObject colorSchemes:'
     )
 
 with open("/etc/xdg/quickshell/noctalia-shell/Commons/Settings.qml", "w") as f:
@@ -494,18 +432,19 @@ import json
 with open("/etc/xdg/quickshell/noctalia-shell/Assets/settings-default.json") as f:
     data = json.load(f)
 
+# outputScales as string "{}" to match property string in QML
 if "display" in data:
+    data["display"]["outputScales"] = "{}"
     data["display"]["focusRingWidth"] = 2
     data["display"]["gaps"] = 8
 else:
-    # Inserir display section
     new_data = {}
     for k, v in data.items():
         if k == "brightness":
-            new_data["display"] = {"outputScales": {}, "focusRingWidth": 2, "gaps": 8}
+            new_data["display"] = {"outputScales": "{}", "focusRingWidth": 2, "gaps": 8}
         new_data[k] = v
     if "display" not in new_data:
-        new_data["display"] = {"outputScales": {}, "focusRingWidth": 2, "gaps": 8}
+        new_data["display"] = {"outputScales": "{}", "focusRingWidth": 2, "gaps": 8}
     data = new_data
 
 with open("/etc/xdg/quickshell/noctalia-shell/Assets/settings-default.json", "w") as f:
