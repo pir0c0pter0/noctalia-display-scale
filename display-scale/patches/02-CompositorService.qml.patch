@@ -1,6 +1,6 @@
 --- a/Services/Compositor/CompositorService.qml
 +++ b/Services/Compositor/CompositorService.qml
-@@ -122,10 +122,44 @@
+@@ -122,10 +122,56 @@
    Loader {
      id: backendLoader
      onLoaded: {
@@ -11,17 +11,28 @@
          root.backend = item;
          setupBackendConnections();
          backend.initialize();
-+        applySavedScales();
++        // Apply settings now if already loaded, otherwise wait for signal
++        if (Settings.isLoaded) {
++          applySavedScales();
++        }
        }
      }
    }
 
-+  // Apply saved display scales on startup
++  Connections {
++    target: Settings
++    function onSettingsLoaded() {
++      if (backend) {
++        applySavedScales();
++      }
++    }
++  }
++
++  // Apply saved display scales on startup (reads JSON string)
 +  function applySavedScales() {
 +    try {
-+      const saved = Settings.data.display.outputScales;
-+      if (!saved || typeof saved !== 'object')
-+        return;
++      var saved = {};
++      try { saved = JSON.parse(Settings.data.display.outputScales || "{}"); } catch(e) { return; }
 +
 +      const outputs = Object.keys(saved);
 +      if (outputs.length === 0)
@@ -51,10 +62,11 @@
      if (backend && backend.setOutputScale) {
        backend.setOutputScale(outputName, scale);
 +
-+      // Persist to settings
-+      var saved = Settings.data.display.outputScales || {};
++      // Persist to settings as JSON string
++      var saved = {};
++      try { saved = JSON.parse(Settings.data.display.outputScales || "{}"); } catch(e) {}
 +      saved[outputName] = scale;
-+      Settings.data.display.outputScales = saved;
++      Settings.data.display.outputScales = JSON.stringify(saved);
      } else {
        Logger.w("CompositorService", "Backend does not support setting output scale");
      }

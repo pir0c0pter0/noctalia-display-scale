@@ -2,11 +2,25 @@
 +++ b/Services/Compositor/CompositorService.qml
 @@ -132,6 +132,7 @@
          backend.initialize();
-         applySavedScales();
-+        applySavedLayoutSettings();
+-        applySavedScales();
++        if (Settings.isLoaded) {
++          applySavedScales();
++          applySavedLayoutSettings();
++        }
        }
      }
    }
+
++  Connections {
++    target: Settings
++    function onSettingsLoaded() {
++      if (backend) {
++        applySavedScales();
++        applySavedLayoutSettings();
++      }
++    }
++  }
+
 @@ -159,6 +160,19 @@
      }
    }

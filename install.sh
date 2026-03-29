@@ -189,20 +189,35 @@ else
 with open("/etc/xdg/quickshell/noctalia-shell/Services/Compositor/CompositorService.qml") as f:
     content = f.read()
 
-# 3a0. Adicionar call applySavedScales() após backend.initialize()
+# 3a0. Adicionar call applySavedScales() com check Settings.isLoaded
 content = content.replace(
     "        backend.initialize();\n",
-    "        backend.initialize();\n        applySavedScales();\n"
+    "        backend.initialize();\n        if (Settings.isLoaded) { applySavedScales(); }\n"
 )
 
-# 3a0b. Adicionar função applySavedScales
+# 3a0a. Adicionar Connections para resolver race condition
+connections_block = """
+  Connections {
+    target: Settings
+    function onSettingsLoaded() {
+      if (backend) {
+        applySavedScales();
+      }
+    }
+  }
+"""
+content = content.replace(
+    "  // Load display scales from ShellState",
+    connections_block + "\n  // Load display scales from ShellState"
+)
+
+# 3a0b. Adicionar função applySavedScales (lê JSON string)
 func_scales = """
-  // Apply saved display scales on startup
+  // Apply saved display scales on startup (reads JSON string)
   function applySavedScales() {
     try {
-      const saved = Settings.data.display.outputScales;
-      if (!saved || typeof saved !== 'object')
-        return;
+      var saved = {};
+      try { saved = JSON.parse(Settings.data.display.outputScales || "{}"); } catch(e) { return; }
 
       const outputs = Object.keys(saved);
       if (outputs.length === 0)
@@ -240,10 +255,16 @@ else
 with open("/etc/xdg/quickshell/noctalia-shell/Services/Compositor/CompositorService.qml") as f:
     content = f.read()
 
-# 3a. Adicionar call applySavedLayoutSettings() após applySavedScales()
+# 3a. Adicionar call applySavedLayoutSettings() junto com applySavedScales()
 content = content.replace(
-    "        applySavedScales();\n",
-    "        applySavedScales();\n        applySavedLayoutSettings();\n"
+    "        if (Settings.isLoaded) { applySavedScales(); }\n",
+    "        if (Settings.isLoaded) { applySavedScales(); applySavedLayoutSettings(); }\n"
+)
+
+# 3a1. Atualizar Connections para incluir applySavedLayoutSettings
+content = content.replace(
+    "        applySavedScales();\n      }\n    }\n  }\n",
+    "        applySavedScales();\n        applySavedLayoutSettings();\n      }\n    }\n  }\n"
 )
 
 # 3b. Adicionar função antes de "// Hyprland backend component"
@@ -287,10 +308,11 @@ func = """
     if (backend && backend.setOutputScale) {
       backend.setOutputScale(outputName, scale);
 
-      // Persist to settings
-      var saved = Settings.data.display.outputScales || {};
+      // Persist to settings as JSON string
+      var saved = {};
+      try { saved = JSON.parse(Settings.data.display.outputScales || "{}"); } catch(e) {}
       saved[outputName] = scale;
-      Settings.data.display.outputScales = saved;
+      Settings.data.display.outputScales = JSON.stringify(saved);
     } else {
       Logger.w("CompositorService", "Backend does not support setting output scale");
     }
@@ -442,13 +464,13 @@ with open("/etc/xdg/quickshell/noctalia-shell/Commons/Settings.qml") as f:
 
 if "property var outputScales" in content:
     content = content.replace(
-        "      property var outputScales: ({})\n    }",
-        "      property var outputScales: ({})\n      property int focusRingWidth: 2\n      property int gaps: 8\n    }"
+        "      property string outputScales: "{}"\n    }",
+        "      property string outputScales: "{}"\n      property int focusRingWidth: 2\n      property int gaps: 8\n    }"
     )
 else:
     content = content.replace(
         "    property JsonObject colorSchemes:",
-        "    property JsonObject display: JsonObject {\n      property var outputScales: ({})\n      property int focusRingWidth: 2\n      property int gaps: 8\n    }\n\n    property JsonObject colorSchemes:"
+        "    property JsonObject display: JsonObject {\n      property string outputScales: "{}"\n      property int focusRingWidth: 2\n      property int gaps: 8\n    }\n\n    property JsonObject colorSchemes:"
     )
 
 with open("/etc/xdg/quickshell/noctalia-shell/Commons/Settings.qml", "w") as f:

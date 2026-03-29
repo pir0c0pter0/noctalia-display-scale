@@ -5,7 +5,7 @@
 +    // display scale overrides
 +    // Format: { "eDP-1": 1.25, "HDMI-A-1": 1.0 }
 +    property JsonObject display: JsonObject {
-+      property var outputScales: ({})
++      property string outputScales: "{}"
 +    }
 +
      property JsonObject colorSchemes: JsonObject {
